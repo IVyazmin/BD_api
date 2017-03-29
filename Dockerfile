@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-MAINTAINER Vyacheslav Kruglov
+MAINTAINER 
 
 # Обвновление списка пакетов
 RUN apt-get -y update
@@ -22,11 +22,11 @@ RUN pip3 install django
 
 USER postgres
 
-# Create a PostgreSQL role named ``docker`` with ``docker`` as the password and
-# then create a database `dbapi` owned by the ``docker`` role.
+# Create a PostgreSQL role named ``viv`` with ``sunmoonmars`` as the password and
+# then create a database `posts1` owned by the ``viv`` role.
 RUN /etc/init.d/postgresql start &&\
-    psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
-    createdb -E UTF8 -T template0 -O docker dbapi &&\
+    psql --command "CREATE USER viv WITH SUPERUSER PASSWORD 'sunmoonmars';" &&\
+    createdb -E UTF8 -T template0 -O viv posts1 &&\
     /etc/init.d/postgresql stop
 
 # Adjust PostgreSQL configuration so that remote connections to the
@@ -46,9 +46,9 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 USER root
 
 # Копируем исходный код в Docker-контейнер
-ENV WORK /opt/TechnoparkDB
-ADD dbAPI/ $WORK/dbAPI/
-ADD schema.sql $WORK/schema.sql
+ENV WORK /opt/BD
+ADD posts/ $WORK/posts/
+ADD bd_init.sql $WORK/bd_init.sql
 
 # Объявлем порт сервера
 EXPOSE 5000
@@ -56,8 +56,8 @@ EXPOSE 5000
 #
 # Запускаем PostgreSQL и сервер
 #
-ENV PGPASSWORD docker
+ENV PGPASSWORD sunmoonmars
 CMD service postgresql start &&\
-	psql -h localhost -U docker -d dbapi -f $WORK/schema.sql &&\ 
-	cd $WORK/dbAPI &&\ 
-	gunicorn -b :5000 dbAPI.wsgi
+	psql -h localhost -U viv -d posts1 -f $WORK/bd_init.sql &&\ 
+	cd $WORK/posts &&\ 
+	gunicorn -b :5000 posts.wsgi
