@@ -46,3 +46,5 @@ user_nickname citext collate ucs_basic references users (nickname) on delete cas
 thread_id int references threads (id) on delete cascade,
 vote smallint,
 PRIMARY KEY (user_nickname, thread_id));
+
+#create OR replace function check_exist_forum()

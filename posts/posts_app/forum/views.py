@@ -105,21 +105,23 @@ def threads(request, forum_slug):
 	if cursor.rowcount == 0:
 		cursor.close()
 		return JsonResponse({}, status = 404)
-	limit = 99999999
+	limit = ' ALL '
 	if 'limit' in request.GET:
 		limit = request.GET['limit']
-	order = False
+	order = 'asc'
 	if 'desc' in request.GET:
-		order = True if request.GET['desc'] == 'true' else False
-	since = '3001.01.01'
+		order = 'desc' if request.GET['desc'] == 'true' else 'asc'
+	since = ''
 	if 'since' in request.GET:
-		since = request.GET['since']
-	if order:
-		cursor.execute(SELECT_THREADS_BY_FORUM_DESC, [forum_slug, since, limit])
-	else:
-		if 'since' not in request.GET:
-			since = '0001.01.01'
-		cursor.execute(SELECT_THREADS_BY_FORUM_ASC, [forum_slug, since, limit])
+		znak = ' <= ' if order == 'desc' else ' >= '
+		since = 'and created ' + znak + "'" +request.GET['since'] + "'"
+
+	order = ' ' + order + ' '
+	forum_slug = "'" + forum_slug + "'"
+
+	query = SELECT_THREADS_BY_FORUM % (forum_slug, since, order, limit)
+	cursor.execute(query)
+
 	threads = []
 	param_array = ['author', 'created', 'forum', 'id', 'message', 'slug', 'title', 'votes']
 	for thread in cursor.fetchall():
@@ -136,24 +138,33 @@ def localtime(created):
 def users(request, forum_slug):
 	cursor = connection.cursor()
 	cursor.execute(SELECT_FORUM_BY_SLUG, [forum_slug,])
+	args = []
+	order = ' asc '
+	znak = '> '
+	whereN = ' where '
+	since = ''
+	limit = ''
+	forum_slug = "'" + forum_slug + "'"
 	if cursor.rowcount == 0:
 		cursor.close()
 		return JsonResponse({}, status = 404)
-	limit = 99999999
-	if 'limit' in request.GET:
-		limit = request.GET['limit']
-	order = False
 	if 'desc' in request.GET:
-		order = True if request.GET['desc'] == 'true' else False
-	since = ' '
+		if request.GET['desc'] == 'true':
+			order = ' desc '
+			znak = '< '
 	if 'since' in request.GET:
-		since = request.GET['since']
-	if order:
-		if 'since' not in request.GET:
-			since = 'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ'
-		cursor.execute(SELECT_USERS_BY_FORUM_DESC, [since, forum_slug, forum_slug, limit])
+		since = "'" + request.GET['since'] + "'"
+		whereN += 'nickname ' + znak + since + ' and '
 	else:
-		cursor.execute(SELECT_USERS_BY_FORUM_ASC, [since, forum_slug, forum_slug, limit])
+		znak = ''
+
+
+	if 'limit' in request.GET:
+		limit = 'limit ' + str(request.GET['limit'])
+	
+	query = SELECT_USERS_BY_FORUM % (whereN, forum_slug, forum_slug, order, limit)
+	cursor.execute(query)
+	
 	param_array = ["about", "email", "fullname", "nickname"]
 	users = [dict(zip(param_array, user)) for user in cursor.fetchall()]
 	cursor.close()

@@ -7,6 +7,7 @@ import psycopg2
 from django.db.utils import IntegrityError, DatabaseError
 import pytz, datetime
 from django.utils import timezone
+from random import random
 
 
 @csrf_exempt
@@ -29,12 +30,14 @@ def create(request, thread_slug):
 	thread_slug = thread[1]
 	forum_slug = thread[2]
 	posts = []
+	array = []
 	new_posts = 0
 	time_now = timezone.now()
+	
 	for body in bodies:
 		user_nickname = body['author']
 		message = body['message']
-		isEdited = body['isEdited']
+		isEdited = body['isEdited'] if 'isEdited' in body else False
 		parent = None
 		if 'parent' in body:
 			parent = body['parent']
@@ -46,6 +49,7 @@ def create(request, thread_slug):
 				cursor.close()
 				return JsonResponse({}, status = 409)
 		created = body['created'] if 'created' in body else time_now
+		#array.append([user_nickname, message, isEdited, created, thread_id, forum_slug, parent])
 		try:
 			cursor.execute(INSERT_POST, [user_nickname, message, isEdited, created, thread_id, forum_slug, parent])
 		except IntegrityError:
@@ -56,9 +60,12 @@ def create(request, thread_slug):
 		body['created'] = localtime(returned[1])
 		body['thread'] = thread_id
 		body['forum'] = forum_slug
-		
 		posts.append(body)
 		new_posts += 1
+	#cursor.executemany(INSERT_POST, array)
+	#returned = cursor.fetch()
+	#for i in range(len(posts)):
+	#	posts[i]['id'] = returned[i]
 	cursor.execute(PLASS_POSTS, [new_posts, forum_slug,])
 	return JsonResponse(posts, status = 201, safe = False)
 
@@ -218,7 +225,9 @@ def slug_posts(request, thread_slug):
 	if marker:
 		page = marking.m[marker]
 
-	marking('marker', int(limit) + page)
+	mark = str(random())
+
+	marking(mark, int(limit) + page)
 	args.append(str(page))
 
 	if sort == "parent_tree":
@@ -234,10 +243,12 @@ def slug_posts(request, thread_slug):
 	
 	param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited"]
 	all_posts = [dict(zip(param_array, row)) for row in cursor.fetchall()]
+	if len(all_posts) == 0:
+		mark = marker
 	for post in all_posts:
 		post['created'] = localtime(post['created'])
 
-	response = {'marker': 'marker', 'posts': all_posts}
+	response = {'marker': mark, 'posts': all_posts}
 
 	cursor.close()
 	return JsonResponse(response, status = 200)

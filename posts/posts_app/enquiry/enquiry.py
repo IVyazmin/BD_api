@@ -36,14 +36,9 @@ SELECT_THREAD_BY_ID_ALL = '''SELECT user_nickname, created, forum_slug, id, mess
 SELECT_FORUM_BY_SLUG = '''SELECT posts, slug, threads, title, user_nickname FROM forums
 						WHERE slug = %s;'''
 
-SELECT_THREADS_BY_FORUM_DESC = '''SELECT user_nickname, created, forum_slug, id, message, slug, title, vote FROM threads
-						WHERE forum_slug = %s AND created <= %s
-						ORDER BY created DESC
-						LIMIT %s;'''
-
-SELECT_THREADS_BY_FORUM_ASC = '''SELECT user_nickname, created, forum_slug, id, message, slug, title, vote FROM threads
-						WHERE forum_slug = %s AND created >= %s
-						ORDER BY created ASC
+SELECT_THREADS_BY_FORUM = '''SELECT user_nickname, created, forum_slug, id, message, slug, title, vote FROM threads
+						WHERE forum_slug = %s %s
+						ORDER BY created %s
 						LIMIT %s;'''
 
 INSERT_POST_NOW = '''INSERT INTO posts (user_nickname, message, isEdited, created, thread_id, forum_slug, parent_id)
@@ -115,17 +110,7 @@ SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = '''
 			ORDER BY path %s
 		'''
 
-WITH_LIMIT = '''
-			LIMIT %s
-		'''
 
-WITH_OFFSET = '''
-			OFFSET %s
-		'''
-
-WITH_DESC = '''
-			DESC
-		'''
 UPDATE_THREAD = '''UPDATE threads SET user_nickname = %s, created = %s, forum_slug = %s, id = %s, message = %s, title = %s, slug = %s
 				WHERE id = %s
 				RETURNING user_nickname, created, forum_slug, id, message, slug, title, vote;'''
@@ -136,25 +121,16 @@ PLASS_THREAD = '''UPDATE forums SET threads = threads + 1
 PLASS_POSTS = '''UPDATE forums SET posts = posts + %s
 				WHERE slug = %s;'''
 
-SELECT_USERS_BY_FORUM_DESC = '''SELECT about, email, fullname, nickname FROM users
-								WHERE nickname < %s AND nickname IN 
+SELECT_USERS_BY_FORUM = '''SELECT about, email, fullname, nickname FROM users
+								%s nickname IN 
 								(SELECT user_nickname FROM threads 
 								WHERE forum_slug = %s
 								UNION
 								SELECT user_nickname FROM posts
 								WHERE forum_slug = %s)
-								ORDER BY nickname DESC
-								LIMIT %s;'''
+								ORDER BY nickname %s
+								%s;'''
 
-SELECT_USERS_BY_FORUM_ASC = '''SELECT about, email, fullname, nickname FROM users
-								WHERE nickname > %s AND nickname IN 
-								(SELECT user_nickname FROM threads 
-								WHERE forum_slug = %s
-								UNION
-								SELECT user_nickname FROM posts
-								WHERE forum_slug = %s)
-								ORDER BY nickname ASC
-								LIMIT %s;'''
 
 SELECT_POST_BY_ID = '''SELECT "id", "message", "user_nickname", "forum_slug", "thread_id", "parent_id", "created", "isedited" from posts
 						WHERE id = %s;'''
@@ -170,8 +146,8 @@ COUNT_USERS = '''SELECT COUNT(*) from users;'''
 
 COUNT_POSTS = '''SELECT COUNT(*) from posts;'''
 
-DELETE_ALL = '''DELETE from votes;
-				DELETE from posts;
-				DELETE from threads;
-				DELETE from forums;
-				DELETE from users;'''
+DELETE_ALL = '''TRUNCATE votes;
+				TRUNCATE posts;
+				TRUNCATE threads;
+				TRUNCATE forums;
+				TRUNCATE users;'''
