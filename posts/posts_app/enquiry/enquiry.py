@@ -65,7 +65,7 @@ INSERT_VOTE = '''INSERT INTO votes (user_nickname, thread_id, vote)
 				VALUES (%s, %s, %s)'''
 
 UPDATE_THREAD_VOTE = '''UPDATE threads SET vote = vote + %s
-						WHERE slug = %s'''
+						WHERE id = %s'''
 
 UPDATE_VOTE = '''UPDATE votes SET vote = %s
 				WHERE user_nickname = %s AND thread_id = %s'''
@@ -146,8 +146,8 @@ COUNT_USERS = '''SELECT COUNT(*) from users;'''
 
 COUNT_POSTS = '''SELECT COUNT(*) from posts;'''
 
-DELETE_ALL = '''TRUNCATE votes;
-				TRUNCATE posts;
-				TRUNCATE threads;
-				TRUNCATE forums;
-				TRUNCATE users;'''
+DELETE_ALL = '''TRUNCATE votes CASCADE;
+				TRUNCATE posts CASCADE;
+				TRUNCATE threads CASCADE;
+				TRUNCATE forums CASCADE;
+				TRUNCATE users CASCADE;'''

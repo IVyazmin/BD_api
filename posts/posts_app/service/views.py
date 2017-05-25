@@ -18,10 +18,12 @@ def status(request):
 	stat['thread'] = cursor.fetchone()[0]
 	cursor.execute(COUNT_USERS)
 	stat['user'] = cursor.fetchone()[0]
+	cursor.close()
 	return JsonResponse(stat, status = 200)
 
 @csrf_exempt
 def clear(request):
 	cursor = connection.cursor()
 	cursor.execute(DELETE_ALL)
+	cursor.close()
 	return JsonResponse({}, status = 200)

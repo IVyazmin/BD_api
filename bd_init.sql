@@ -47,4 +47,17 @@ thread_id int references threads (id) on delete cascade,
 vote smallint,
 PRIMARY KEY (user_nickname, thread_id));
 
-#create OR replace function check_exist_forum()
+create INDEX idx_users_nickname on users using btree (nickname text_pattern_ops);
+create INDEX idx_users_email on users using btree (email text_pattern_ops);
+create INDEX idx_forums_slug on forums using btree (slug text_pattern_ops);
+create INDEX idx_forums_nickname on forums using btree (user_nickname text_pattern_ops);
+create INDEX idx_threads_id on threads using btree (id);
+create INDEX idx_threads_nickname on threads using btree (user_nickname text_pattern_ops);
+create INDEX idx_threads_slug on threads using btree (slug text_pattern_ops);
+create INDEX idx_threads_forum on threads using btree (forum_slug text_pattern_ops);
+create INDEX idx_posts_id on posts using btree (id);
+create INDEX idx_posts_nickname on posts using btree (user_nickname text_pattern_ops);
+create INDEX idx_posts_forum on posts using btree (forum_slug text_pattern_ops);
+create INDEX idx_posts_thread on posts using btree (thread_id);
+create INDEX idx_votes_nickname_thread on votes using btree (user_nickname text_pattern_ops, thread_id);
+create INDEX idx_votes_thread on votes using btree (thread_id);

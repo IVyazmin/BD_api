@@ -67,6 +67,7 @@ def create(request, thread_slug):
 	#for i in range(len(posts)):
 	#	posts[i]['id'] = returned[i]
 	cursor.execute(PLASS_POSTS, [new_posts, forum_slug,])
+	cursor.close()
 	return JsonResponse(posts, status = 201, safe = False)
 
 
@@ -101,22 +102,22 @@ def vote(request, thread_slug):
 	if cursor.rowcount == 0:
 		try:
 			cursor.execute(INSERT_VOTE, [user_nickname, thread_id, vote])
-		except IntegrityError:
+		except:
 			cursor.close()
 			return JsonResponse({}, status = 404)
 		thread['votes'] = thread['votes'] + vote
-		cursor.execute(UPDATE_THREAD_VOTE, [vote, thread_slug])
+		cursor.execute(UPDATE_THREAD_VOTE, [vote, thread_id])
 		cursor.close()
 		return JsonResponse(thread, status = 200)
 	else:
 		vote_row = cursor.fetchone()
-		if vote_row[2] == vote:
+		if int(vote_row[2]) == int(vote):
 			cursor.close()
 			return JsonResponse(thread, status = 200)
 		else:
 			cursor.execute(UPDATE_VOTE, [vote, user_nickname, thread_id,])
 			thread['votes'] = thread['votes'] + 2 * vote
-			cursor.execute(UPDATE_THREAD_VOTE, [2 * vote, thread_slug,])
+			cursor.execute(UPDATE_THREAD_VOTE, [2 * vote, thread_id,])
 			cursor.close()
 			return JsonResponse(thread, status = 200)
 
@@ -169,6 +170,7 @@ def details(request, thread_slug):
 		thread = cursor.fetchone()
 		thread = dict(zip(param_array, thread))
 		thread['created'] = localtime(thread['created'])
+		cursor.close()
 		return JsonResponse(thread, status = 200)
 
 

@@ -23,10 +23,10 @@ RUN pip3 install django
 USER postgres
 
 # Create a PostgreSQL role named ``viv`` with ``sunmoonmars`` as the password and
-# then create a database `posts1` owned by the ``viv`` role.
+# then create a database `poststest` owned by the ``viv`` role.
 RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER viv WITH SUPERUSER PASSWORD 'sunmoonmars';" &&\
-    createdb -E UTF8 -T template0 -O viv posts1 &&\
+    createdb -E UTF8 -T template0 -O viv poststest &&\
     /etc/init.d/postgresql stop
 
 # Adjust PostgreSQL configuration so that remote connections to the
@@ -58,6 +58,6 @@ EXPOSE 5000
 #
 ENV PGPASSWORD sunmoonmars
 CMD service postgresql start &&\
-	psql -h localhost -U viv -d posts1 -f $WORK/bd_init.sql &&\ 
+	psql -h localhost -U viv -d poststest -f $WORK/bd_init.sql &&\ 
 	cd $WORK/posts &&\ 
 	gunicorn -b :5000 posts.wsgi

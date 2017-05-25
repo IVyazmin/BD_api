@@ -56,6 +56,7 @@ def profile(request, nickname):
 		except IntegrityError:
 			cursor.close()
 			return JsonResponse({}, status = 409)
+		cursor.close()
 		return JsonResponse(user, status = 200)
 	else:
 		cursor = connection.cursor()
