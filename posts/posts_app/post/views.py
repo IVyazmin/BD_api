@@ -3,6 +3,7 @@ from json import loads
 from django.db import connection
 from django.http import JsonResponse
 from posts_app.enquiry.enquiry import *
+from posts_app.enquiry.connect import *
 import psycopg2
 from django.db.utils import IntegrityError, DatabaseError
 import pytz
@@ -12,10 +13,12 @@ def details(request, post_id):
 	if request.method == 'GET':
 		related = request.GET.get('related', False)
 		related = related.split(',') if related else []
-		cursor = connection.cursor()
+		connect = connectPool()
+		cursor = connect.cursor()
 		cursor.execute(SELECT_POST_BY_ID, [post_id,])
 		if cursor.rowcount == 0:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited"]
 		post = dict(zip(param_array, cursor.fetchone()))
@@ -39,14 +42,17 @@ def details(request, post_id):
 			thread['created'] = localtime(thread['created'])
 			post_all['thread'] = thread
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(post_all, status = 200)
 	else:
 		body = loads(request.body.decode('utf8'))
 		message = body['message'] if 'message' in body else False
-		cursor = connection.cursor()
+		connect = connectPool()
+		cursor = connect.cursor()
 		cursor.execute(SELECT_POST_BY_ID, [post_id,])
 		if cursor.rowcount == 0:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited"]
 		post = dict(zip(param_array, cursor.fetchone()))
@@ -56,6 +62,7 @@ def details(request, post_id):
 			post['message'] = message
 		post['created'] = localtime(post['created'])
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(post, status = 200)
 
 

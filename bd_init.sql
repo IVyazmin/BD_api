@@ -6,6 +6,8 @@ drop table if exists users;
 
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 
+SET SYNCHRONOUS_COMMIT = 'off';
+
 create table users (
 about text,
 email citext collate ucs_basic,

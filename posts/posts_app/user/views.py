@@ -3,6 +3,7 @@ from json import loads
 from django.db import connection
 from django.http import JsonResponse
 from posts_app.enquiry.enquiry import *
+from posts_app.enquiry.connect import *
 import psycopg2
 from django.db.utils import IntegrityError, DatabaseError
 
@@ -13,12 +14,13 @@ def create(request, nickname):
 	email = body['email']
 	fullname = body['fullname']
 
-	cursor = connection.cursor()
+	connect = connectPool()
+	cursor = connect.cursor()
 	is_user_exist = False
 	param_array = ["about", "email", "fullname", "nickname"]
 	try:
 		cursor.execute(INSERT_USER, [about, email, fullname, nickname])
-	except IntegrityError:
+	except:
 		is_user_exist = True
 	if is_user_exist:
 		users = []
@@ -26,19 +28,23 @@ def create(request, nickname):
 		for user in cursor.fetchall():
 			users.append(dict(zip(param_array, user)))
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(users, status = 409, safe = False)
 	else:
 		cursor.close()
+		connectPool(connect)
 		body['nickname'] = nickname
 		return JsonResponse(body, status = 201)
 
 @csrf_exempt
 def profile(request, nickname):
 	if request.method == 'POST':
-		cursor = connection.cursor()
+		connect = connectPool()
+		cursor = connect.cursor()
 		cursor.execute(SELECT_USER_BY_NICKNAME, [nickname,])
 		if cursor.rowcount == 0:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		user = cursor.fetchone()
 		param_array = ["about", "email", "fullname", "nickname"]
@@ -53,19 +59,24 @@ def profile(request, nickname):
 		user['nickname'] = nickname
 		try:
 			cursor.execute(UPDATE_USER, [user['about'], user['email'], user['fullname'], user['nickname']])
-		except IntegrityError:
+		except:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 409)
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(user, status = 200)
 	else:
-		cursor = connection.cursor()
+		connect = connectPool()
+		cursor = connect.cursor()
 		cursor.execute(SELECT_USER_BY_NICKNAME, [nickname,])
 		if cursor.rowcount == 0:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		user = cursor.fetchone()
 		cursor.close()
+		connectPool(connect)
 		param_array = ["about", "email", "fullname", "nickname"]
 		user = dict(zip(param_array, user))
 		return JsonResponse(user, status = 200)

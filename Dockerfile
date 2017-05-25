@@ -60,4 +60,5 @@ ENV PGPASSWORD sunmoonmars
 CMD service postgresql start &&\
 	psql -h localhost -U viv -d poststest -f $WORK/bd_init.sql &&\ 
 	cd $WORK/posts &&\ 
-	gunicorn -b :5000 posts.wsgi
+	gunicorn -b :5000 -w 4 -k gthread --threads 2 posts.wsgi
+

@@ -3,6 +3,7 @@ from json import loads
 from django.db import connection
 from django.http import JsonResponse
 from posts_app.enquiry.enquiry import *
+from posts_app.enquiry.connect import *
 import psycopg2
 from django.db.utils import IntegrityError, DatabaseError
 import pytz, datetime
@@ -13,7 +14,8 @@ from random import random
 @csrf_exempt
 def create(request, thread_slug):
 	bodies = loads(request.body.decode('utf8'))
-	cursor = connection.cursor()
+	connect = connectPool()
+	cursor = connect.cursor()
 	try:
 		thread_slug = int(thread_slug)
 	except:
@@ -24,7 +26,9 @@ def create(request, thread_slug):
 		cursor.execute(SELECT_THREAD_BY_SLUG, [str(thread_slug)])
 	if cursor.rowcount == 0:
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse({}, status = 404)
+
 	thread = cursor.fetchone()
 	thread_id = thread[0]
 	thread_slug = thread[1]
@@ -33,6 +37,28 @@ def create(request, thread_slug):
 	array = []
 	new_posts = 0
 	time_now = timezone.now()
+
+	parents = set()
+	for body in bodies:
+		print(777777777777777777777777777777777)
+		if 'parent' in body:
+			parents.add(body['parent'])
+			print(8888888888888888888888888888888888888888888888)
+	print(parents)
+	parents = tuple(parents)
+	if len(parents) > 0:
+		paren = str(parents) if len(parents) > 1 else ("(" + str(tuple(parents)[0]) + ")")
+
+		cursor.execute("select count(*) from posts where thread_id = " + str(thread_id) + " and id in " + paren +";")
+		count = cursor.fetchone()
+		print(int(count[0]), len(parents))
+		if int(count[0]) != len(parents):
+			print(12345)
+			cursor.close()
+			connectPool(connect)
+			return JsonResponse({}, status = 409)
+
+	
 	
 	for body in bodies:
 		user_nickname = body['author']
@@ -41,19 +67,22 @@ def create(request, thread_slug):
 		parent = None
 		if 'parent' in body:
 			parent = body['parent']
-			cursor.execute(SELECT_POST_BY_ID, [parent,])
-			if cursor.rowcount == 0:
-				cursor.close()
-				return JsonResponse({}, status = 409)
-			if cursor.fetchone()[4] != thread_id:
-				cursor.close()
-				return JsonResponse({}, status = 409)
+		#	cursor.execute(SELECT_POST_BY_ID, [parent,])
+		#	if cursor.rowcount == 0:
+		#		cursor.close()
+		#		connectPool(connect)
+		#		return JsonResponse({}, status = 409)
+		#	if cursor.fetchone()[4] != thread_id:
+		#		cursor.close()
+		#		connectPool(connect)
+		#		return JsonResponse({}, status = 409)
 		created = body['created'] if 'created' in body else time_now
 		#array.append([user_nickname, message, isEdited, created, thread_id, forum_slug, parent])
 		try:
 			cursor.execute(INSERT_POST, [user_nickname, message, isEdited, created, thread_id, forum_slug, parent])
-		except IntegrityError:
+		except:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		returned = cursor.fetchone()
 		body['id'] = returned[0]
@@ -68,6 +97,7 @@ def create(request, thread_slug):
 	#	posts[i]['id'] = returned[i]
 	cursor.execute(PLASS_POSTS, [new_posts, forum_slug,])
 	cursor.close()
+	connectPool(connect)
 	return JsonResponse(posts, status = 201, safe = False)
 
 
@@ -80,7 +110,8 @@ def vote(request, thread_slug):
 	body = loads(request.body.decode('utf8'))
 	user_nickname = body['nickname']
 	vote = body['voice']
-	cursor = connection.cursor()
+	connect = connectPool()
+	cursor = connect.cursor()
 	try:
 		thread_slug = int(thread_slug)
 	except:
@@ -91,6 +122,7 @@ def vote(request, thread_slug):
 		cursor.execute(SELECT_THREAD_BY_SLUG_ALL, [str(thread_slug)])
 	if cursor.rowcount == 0:
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse({}, status = 404)
 	thread = cursor.fetchone()
 	param_array = ['author', 'created', 'forum', 'id', 'message', 'slug', 'title', 'votes']
@@ -104,27 +136,32 @@ def vote(request, thread_slug):
 			cursor.execute(INSERT_VOTE, [user_nickname, thread_id, vote])
 		except:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		thread['votes'] = thread['votes'] + vote
 		cursor.execute(UPDATE_THREAD_VOTE, [vote, thread_id])
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(thread, status = 200)
 	else:
 		vote_row = cursor.fetchone()
 		if int(vote_row[2]) == int(vote):
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse(thread, status = 200)
 		else:
 			cursor.execute(UPDATE_VOTE, [vote, user_nickname, thread_id,])
 			thread['votes'] = thread['votes'] + 2 * vote
 			cursor.execute(UPDATE_THREAD_VOTE, [2 * vote, thread_id,])
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse(thread, status = 200)
 
 @csrf_exempt
 def details(request, thread_slug):
 	if request.method == 'GET':
-		cursor = connection.cursor()
+		connect = connectPool()
+		cursor = connect.cursor()
 		try:
 			thread_slug = int(thread_slug)
 		except:
@@ -135,15 +172,18 @@ def details(request, thread_slug):
 			cursor.execute(SELECT_THREAD_BY_SLUG_ALL, [str(thread_slug)])
 		if cursor.rowcount == 0:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		thread = cursor.fetchone()
 		param_array = ['author', 'created', 'forum', 'id', 'message', 'slug', 'title', 'votes']
 		thread = dict(zip(param_array, thread))
 		thread['created'] = localtime(thread['created'])
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(thread, status = 200)
 	else:
-		cursor = connection.cursor()
+		connect = connectPool()
+		cursor = connect.cursor()
 		body = loads(request.body.decode('utf8'))
 		try:
 			thread_slug = int(thread_slug)
@@ -155,6 +195,7 @@ def details(request, thread_slug):
 			cursor.execute(SELECT_THREAD_BY_SLUG_ALL, [str(thread_slug)])
 		if cursor.rowcount == 0:
 			cursor.close()
+			connectPool(connect)
 			return JsonResponse({}, status = 404)
 		thread = cursor.fetchone()
 		param_array = ['author', 'created', 'forum', 'id', 'message', 'slug', 'title', 'votes']
@@ -171,6 +212,7 @@ def details(request, thread_slug):
 		thread = dict(zip(param_array, thread))
 		thread['created'] = localtime(thread['created'])
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse(thread, status = 200)
 
 
@@ -181,7 +223,8 @@ def slug_posts(request, thread_slug):
 	limit = request.GET.get('limit', False)
 	marker = request.GET.get('marker', False)
 	offset = request.GET.get('offset', 0)
-	cursor = connection.cursor()
+	connect = connectPool()
+	cursor = connect.cursor()
 	args = []
 	if sort == 'tree':
 		query = SELECT_POSTS_BY_THREAD_ID_TREE
@@ -201,6 +244,7 @@ def slug_posts(request, thread_slug):
 		cursor.execute(SELECT_THREAD_BY_SLUG_ALL, [str(thread_slug)])
 	if cursor.rowcount == 0:
 		cursor.close()
+		connectPool(connect)
 		return JsonResponse({}, status = 404)
 	thread = cursor.fetchone()
 	param_array = ['author', 'created', 'forum', 'id', 'message', 'slug', 'title', 'votes']
@@ -253,6 +297,7 @@ def slug_posts(request, thread_slug):
 	response = {'marker': mark, 'posts': all_posts}
 
 	cursor.close()
+	connectPool(connect)
 	return JsonResponse(response, status = 200)
 
 def marking(name, page):

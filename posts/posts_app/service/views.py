@@ -3,12 +3,14 @@ from json import loads
 from django.db import connection
 from django.http import JsonResponse
 from posts_app.enquiry.enquiry import *
+from posts_app.enquiry.connect import *
 import psycopg2
 from django.db.utils import IntegrityError, DatabaseError
 import pytz
 
 def status(request):
-	cursor = connection.cursor()
+	connect = connectPool()
+	cursor = connect.cursor()
 	stat = dict()
 	cursor.execute(COUNT_FORUMS)
 	stat['forum'] = cursor.fetchone()[0]
@@ -19,11 +21,14 @@ def status(request):
 	cursor.execute(COUNT_USERS)
 	stat['user'] = cursor.fetchone()[0]
 	cursor.close()
+	connectPool(connect)
 	return JsonResponse(stat, status = 200)
 
 @csrf_exempt
 def clear(request):
-	cursor = connection.cursor()
+	connect = connectPool()
+	cursor = connect.cursor()
 	cursor.execute(DELETE_ALL)
 	cursor.close()
+	connectPool(connect)
 	return JsonResponse({}, status = 200)
