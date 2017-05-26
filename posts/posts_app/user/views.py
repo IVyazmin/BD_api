@@ -28,11 +28,11 @@ def create(request, nickname):
 		for user in cursor.fetchall():
 			users.append(dict(zip(param_array, user)))
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse(users, status = 409, safe = False)
 	else:
 		cursor.close()
-		connectPool(connect)
+		
 		body['nickname'] = nickname
 		return JsonResponse(body, status = 201)
 
@@ -44,7 +44,7 @@ def profile(request, nickname):
 		cursor.execute(SELECT_USER_BY_NICKNAME, [nickname,])
 		if cursor.rowcount == 0:
 			cursor.close()
-			connectPool(connect)
+			
 			return JsonResponse({}, status = 404)
 		user = cursor.fetchone()
 		param_array = ["about", "email", "fullname", "nickname"]
@@ -61,10 +61,10 @@ def profile(request, nickname):
 			cursor.execute(UPDATE_USER, [user['about'], user['email'], user['fullname'], user['nickname']])
 		except:
 			cursor.close()
-			connectPool(connect)
+			
 			return JsonResponse({}, status = 409)
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse(user, status = 200)
 	else:
 		connect = connectPool()
@@ -72,11 +72,11 @@ def profile(request, nickname):
 		cursor.execute(SELECT_USER_BY_NICKNAME, [nickname,])
 		if cursor.rowcount == 0:
 			cursor.close()
-			connectPool(connect)
+			
 			return JsonResponse({}, status = 404)
 		user = cursor.fetchone()
 		cursor.close()
-		connectPool(connect)
+		
 		param_array = ["about", "email", "fullname", "nickname"]
 		user = dict(zip(param_array, user))
 		return JsonResponse(user, status = 200)

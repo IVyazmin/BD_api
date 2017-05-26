@@ -19,7 +19,7 @@ def create_forum(request):
 	cursor.execute(SELECT_USER_BY_NICKNAME, [user_nickname,])
 	if cursor.rowcount == 0:
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse({}, status = 404)
 	user_nickname = cursor.fetchone()[3]
 	try:
@@ -33,11 +33,11 @@ def create_forum(request):
 		param_array = ["posts", "slug", "threads", "title", "user"]
 		exist_forum = dict(zip(param_array, exist_forum))
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse(exist_forum, status = 409)
 	else:
 		cursor.close()
-		connectPool(connect)
+		
 		body['user'] = user_nickname
 		return JsonResponse(body, status = 201)
 
@@ -59,13 +59,13 @@ def create_thread(request, forum_slug):
 	cursor.execute(SELECT_USER_BY_NICKNAME, [user_nickname,])
 	if cursor.rowcount == 0:
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse({}, status = 404)
 	user_nickname = cursor.fetchone()[3]
 	cursor.execute(SELECT_FORUM_BY_SLUG, [forum_slug,])
 	if cursor.rowcount == 0:
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse({}, status = 404)
 	forum_slug = cursor.fetchone()[1]
 	is_thread_exist = False
@@ -87,14 +87,14 @@ def create_thread(request, forum_slug):
 		exist_thread = cursor.fetchone()
 		exist_thread = dict(zip(param_array, exist_thread))
 		cursor.close()
-		connectPool(connect)
+		
 		exist_thread['created'] = localtime(exist_thread['created'])
 		return JsonResponse(exist_thread, status = 409)
 	else:
 		body['forum'] = forum_slug
 		cursor.execute(PLASS_THREAD, [forum_slug,])
 		cursor.close()
-		connectPool(connect)
+		#add_user(user_nickname, forum_slug)
 		return JsonResponse(body, status = 201)
 
 def details(request, forum_slug):
@@ -103,11 +103,11 @@ def details(request, forum_slug):
 	cursor.execute(SELECT_FORUM_BY_SLUG, [forum_slug,])
 	if cursor.rowcount == 0:
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse({}, status = 404)
 	forum = cursor.fetchone()
 	cursor.close()
-	connectPool(connect)
+	
 	param_array = ["posts", "slug", "threads", "title", "user"]
 	user = dict(zip(param_array, forum))
 	return JsonResponse(user, status = 200)
@@ -118,7 +118,7 @@ def threads(request, forum_slug):
 	cursor.execute(SELECT_FORUM_BY_SLUG, [forum_slug,])
 	if cursor.rowcount == 0:
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse({}, status = 404)
 	limit = ' ALL '
 	if 'limit' in request.GET:
@@ -144,7 +144,7 @@ def threads(request, forum_slug):
 		thread[1] = localtime(thread[1])
 		threads.append(dict(zip(param_array, thread)))
 	cursor.close()
-	connectPool(connect)
+	
 	return JsonResponse(threads, status = 200, safe = False)
 
 def localtime(created):
@@ -164,7 +164,7 @@ def users(request, forum_slug):
 	forum_slug = "'" + forum_slug + "'"
 	if cursor.rowcount == 0:
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse({}, status = 404)
 	if 'desc' in request.GET:
 		if request.GET['desc'] == 'true':
@@ -186,5 +186,5 @@ def users(request, forum_slug):
 	param_array = ["about", "email", "fullname", "nickname"]
 	users = [dict(zip(param_array, user)) for user in cursor.fetchall()]
 	cursor.close()
-	connectPool(connect)
+	
 	return JsonResponse(users, status = 200, safe = False)

@@ -18,7 +18,7 @@ def details(request, post_id):
 		cursor.execute(SELECT_POST_BY_ID, [post_id,])
 		if cursor.rowcount == 0:
 			cursor.close()
-			connectPool(connect)
+			
 			return JsonResponse({}, status = 404)
 		param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited"]
 		post = dict(zip(param_array, cursor.fetchone()))
@@ -42,7 +42,7 @@ def details(request, post_id):
 			thread['created'] = localtime(thread['created'])
 			post_all['thread'] = thread
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse(post_all, status = 200)
 	else:
 		body = loads(request.body.decode('utf8'))
@@ -52,7 +52,7 @@ def details(request, post_id):
 		cursor.execute(SELECT_POST_BY_ID, [post_id,])
 		if cursor.rowcount == 0:
 			cursor.close()
-			connectPool(connect)
+			
 			return JsonResponse({}, status = 404)
 		param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited"]
 		post = dict(zip(param_array, cursor.fetchone()))
@@ -62,7 +62,7 @@ def details(request, post_id):
 			post['message'] = message
 		post['created'] = localtime(post['created'])
 		cursor.close()
-		connectPool(connect)
+		
 		return JsonResponse(post, status = 200)
 
 

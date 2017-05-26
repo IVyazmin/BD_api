@@ -21,7 +21,6 @@ def status(request):
 	cursor.execute(COUNT_USERS)
 	stat['user'] = cursor.fetchone()[0]
 	cursor.close()
-	connectPool(connect)
 	return JsonResponse(stat, status = 200)
 
 @csrf_exempt
@@ -30,5 +29,4 @@ def clear(request):
 	cursor = connect.cursor()
 	cursor.execute(DELETE_ALL)
 	cursor.close()
-	connectPool(connect)
 	return JsonResponse({}, status = 200)
