@@ -60,7 +60,7 @@ def create(request, thread_slug):
 			post_parents[i[0]] = i[1]
 	else:
 		post_parents = {}
-	cursor.execute('select * from get_indexes()');
+	cursor.execute('select * from get_indexes()');print
 	ids = cursor.fetchall()
 
 
@@ -76,7 +76,7 @@ def create(request, thread_slug):
 		else:
 			parent = None
 			path = [id,]
-		
+
 		param_list.append(list((id, body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent, path)))
 		new_posts += 1
 		param_array = ['id', 'author', 'message', 'isEdited', 'created', 'thread', 'forum', 'parent', 'path']
@@ -89,12 +89,11 @@ def create(request, thread_slug):
 	try:
 		execute_batch(cursor, "Execute posts_insert (%s, %s, %s, %s, %s, %s, %s, %s, %s)", param_list)
 	except psycopg2.Error as e:
-		print(e.pgcode)
-		print(e)
+		
  
 		cursor.execute("deallocate posts_insert;")
 		cursor.close()
-		print(88888888888888888888888888888888888888)
+		
 		return JsonResponse({}, status = 404)
 		
 	cursor.execute("""Prepare usersforum_insert as INSERT INTO forum_users (user_nickname, forum) VALUES ($1, $2);""")
@@ -215,10 +214,8 @@ def slug_posts(request, thread_slug):
 	args = []
 	if sort == 'tree':
 		query = SELECT_POSTS_BY_THREAD_ID_TREE
-		print('tree')
 	elif sort == 'parent_tree':
 		query = SELECT_POSTS_BY_THREAD_ID_PARENT_TREE
-		print('parent')
 	else:
 		query = SELECT_POSTS_BY_THREAD_ID
 
