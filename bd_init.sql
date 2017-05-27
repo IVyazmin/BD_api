@@ -50,7 +50,8 @@ forum_slug citext collate ucs_basic references forums (slug),
 thread_id int references threads (id) on delete cascade,
 parent_id int references posts (id) default NULL,
 created timestamp with time zone,
-isEdited boolean default False);
+isEdited boolean default False,
+path int[]);
 
 create table votes (
 user_nickname citext collate ucs_basic references users (nickname) on delete cascade,

@@ -28,7 +28,6 @@ def create(request, thread_slug):
 		cursor.execute(SELECT_THREAD_BY_SLUG, [str(thread_slug)])
 	if cursor.rowcount == 0:
 		cursor.close()
-		
 		return JsonResponse({}, status = 404)
 
 	thread = cursor.fetchone()
@@ -49,35 +48,53 @@ def create(request, thread_slug):
 	if len(parents) > 0:
 		paren = str(parents) if len(parents) > 1 else ("(" + str(tuple(parents)[0]) + ")")
 
-		cursor.execute("select count(*) from posts where thread_id = " + str(thread_id) + " and id in " + paren +";")
-		count = cursor.fetchone()
-		if int(count[0]) != len(parents):
+		cursor.execute("select id, path from posts where thread_id = " + str(thread_id) + " and id in " + paren +";")
+		
+		if cursor.rowcount < len(parents):
 			cursor.close()
 			return JsonResponse({}, status = 409)
-
+		pathes = cursor.fetchall()
+		param_array = ['id', 'path']
+		post_parents = {}
+		for i in pathes:
+			post_parents[i[0]] = i[1]
+	else:
+		post_parents = {}
 	cursor.execute('select * from get_indexes()');
 	ids = cursor.fetchall()
 
 
 	for body in bodies:
+		id = ids.pop(0)[0]
 		isEdited = body['isEdited'] if 'isEdited' in body else False
-		parent = body['parent'] if 'parent' in body else None
+		
 		created = localtime(body['created']) if 'created' in body else time_now
-		param_list.append(list((ids.pop(0)[0], body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent)))
+		if 'parent' in body:
+			parent = body['parent']
+			path = post_parents[parent][:]
+			path.append(id)
+		else:
+			parent = None
+			path = [id,]
+		
+		param_list.append(list((id, body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent, path)))
 		new_posts += 1
-		param_array = ['id', 'author', 'message', 'isEdited', 'created', 'thread', 'forum', 'parent']
+		param_array = ['id', 'author', 'message', 'isEdited', 'created', 'thread', 'forum', 'parent', 'path']
 		post = dict(zip(param_array, param_list[-1]))
 		posts.append(post)
 		usersforum_list.append(list((body['author'], forum_slug)))
 	
-	cursor.execute("""Prepare posts_insert as INSERT INTO posts (id, user_nickname, message, isEdited, created, thread_id, forum_slug, parent_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8);""")
+	cursor.execute("""Prepare posts_insert as INSERT INTO posts (id, user_nickname, message, isEdited, created, thread_id, forum_slug, parent_id, path)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);""")
 	try:
-		execute_batch(cursor, "Execute posts_insert (%s, %s, %s, %s, %s, %s, %s, %s)", param_list)
-	except: 
+		execute_batch(cursor, "Execute posts_insert (%s, %s, %s, %s, %s, %s, %s, %s, %s)", param_list)
+	except psycopg2.Error as e:
+		print(e.pgcode)
+		print(e)
+ 
 		cursor.execute("deallocate posts_insert;")
 		cursor.close()
-		
+		print(88888888888888888888888888888888888888)
 		return JsonResponse({}, status = 404)
 		
 	cursor.execute("""Prepare usersforum_insert as INSERT INTO forum_users (user_nickname, forum) VALUES ($1, $2);""")
@@ -198,8 +215,10 @@ def slug_posts(request, thread_slug):
 	args = []
 	if sort == 'tree':
 		query = SELECT_POSTS_BY_THREAD_ID_TREE
+		print('tree')
 	elif sort == 'parent_tree':
 		query = SELECT_POSTS_BY_THREAD_ID_PARENT_TREE
+		print('parent')
 	else:
 		query = SELECT_POSTS_BY_THREAD_ID
 
@@ -256,9 +275,9 @@ def slug_posts(request, thread_slug):
 	query = query % args
 	
 	cursor.execute(query)
-	
-	param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited"]
-	all_posts = [dict(zip(param_array, row)) for row in cursor.fetchall()]
+	_posts = cursor.fetchall()
+	param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited", "path"]
+	all_posts = [dict(zip(param_array, row)) for row in _posts]
 	if len(all_posts) == 0:
 		mark = marker
 	for post in all_posts:

@@ -29,6 +29,8 @@ RUN /etc/init.d/postgresql start &&\
     createdb -E UTF8 -T template0 -O viv poststest &&\
     /etc/init.d/postgresql stop
 
+RUN echo "synchronous_commit = off" » /etc/postgresql/$PGVER/main/postgresql.conf
+
 # Adjust PostgreSQL configuration so that remote connections to the
 # database are possible.
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf

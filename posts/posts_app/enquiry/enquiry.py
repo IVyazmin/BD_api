@@ -71,13 +71,13 @@ UPDATE_VOTE = '''UPDATE votes SET vote = %s
 				WHERE user_nickname = %s AND thread_id = %s'''
 
 SELECT_POSTS_BY_THREAD_ID = '''
-			SELECT id, message, user_nickname, forum_slug, thread_id, parent_id, created, isEdited FROM "posts"
+			SELECT id, message, user_nickname, forum_slug, thread_id, parent_id, created, isEdited, path FROM "posts"
 			WHERE thread_id = %s
 			ORDER BY created %s, "id" %s
 			LIMIT %s OFFSET %s
 		'''
 
-SELECT_POSTS_BY_THREAD_ID_TREE = '''
+_SELECT_POSTS_BY_THREAD_ID_TREE = '''
 			WITH RECURSIVE recursetree (id, message, author, forum, thread, parent, created, isEdited, path) AS (
 					SELECT posts.*, array_append('{}'::int[], id) FROM posts
 					WHERE parent_id IS NULL
@@ -93,7 +93,12 @@ SELECT_POSTS_BY_THREAD_ID_TREE = '''
 			LIMIT %s OFFSET %s
 		'''
 
-SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = '''
+SELECT_POSTS_BY_THREAD_ID_TREE = '''select * from posts 
+											where thread_id = %s
+											ORDER by path %s
+											Limit %s offset %s''' 
+
+_SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = '''
 			WITH RECURSIVE recursetree (id, message, author, forum, thread, parent, created, isEdited, path) AS (
 					(SELECT posts.*, array_append('{}'::int[], id) FROM posts
 					WHERE parent_id IS NULL AND
@@ -110,6 +115,14 @@ SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = '''
 			ORDER BY path %s
 		'''
 
+SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = """SELECT * FROM "posts"
+							WHERE path[1] IN (
+				SELECT "id" FROM "posts"
+				WHERE parent_id is Null AND "thread_id" = %s
+				ORDER BY "id" %s
+				LIMIT %s OFFSET %s
+			)
+			ORDER BY "path" %s"""
 
 UPDATE_THREAD = '''UPDATE threads SET user_nickname = %s, created = %s, forum_slug = %s, id = %s, message = %s, title = %s, slug = %s
 				WHERE id = %s
