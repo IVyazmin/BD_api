@@ -121,13 +121,10 @@ PLASS_THREAD = '''UPDATE forums SET threads = threads + 1
 PLASS_POSTS = '''UPDATE forums SET posts = posts + %s
 				WHERE slug = %s;'''
 
-SELECT_USERS_BY_FORUM = '''SELECT about, email, fullname, nickname FROM users
-								%s nickname IN 
-								(SELECT user_nickname FROM threads 
-								WHERE forum_slug = %s
-								UNION
-								SELECT user_nickname FROM posts
-								WHERE forum_slug = %s)
+SELECT_USERS_BY_FORUM = '''SELECT u.about, u.email, u.fullname, u.nickname FROM users u
+								inner join forum_users f
+								on u.nickname = f.user_nickname
+								%s f.forum = %s
 								ORDER BY nickname %s
 								%s;'''
 

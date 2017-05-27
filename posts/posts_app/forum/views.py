@@ -4,6 +4,7 @@ from django.db import connection, DatabaseError, IntegrityError
 from django.http import JsonResponse
 from posts_app.enquiry.enquiry import *
 from posts_app.enquiry.connect import *
+from posts_app.enquiry.add_user import *
 import pytz
 
 @csrf_exempt
@@ -94,7 +95,7 @@ def create_thread(request, forum_slug):
 		body['forum'] = forum_slug
 		cursor.execute(PLASS_THREAD, [forum_slug,])
 		cursor.close()
-		#add_user(user_nickname, forum_slug)
+		add_user(user_nickname, forum_slug)
 		return JsonResponse(body, status = 201)
 
 def details(request, forum_slug):
@@ -180,7 +181,7 @@ def users(request, forum_slug):
 	if 'limit' in request.GET:
 		limit = 'limit ' + str(request.GET['limit'])
 	
-	query = SELECT_USERS_BY_FORUM % (whereN, forum_slug, forum_slug, order, limit)
+	query = SELECT_USERS_BY_FORUM % (whereN, forum_slug, order, limit)
 	cursor.execute(query)
 	
 	param_array = ["about", "email", "fullname", "nickname"]

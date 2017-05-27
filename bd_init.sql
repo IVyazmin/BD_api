@@ -1,4 +1,5 @@
 drop table if exists votes ;
+drop table if exists forum_users;
 drop table if exists posts;
 drop table if exists threads;
 drop table if exists forums;
@@ -62,22 +63,24 @@ user_nickname citext collate ucs_basic references users (nickname) on delete cas
 forum citext collate ucs_basic references forums (slug) on delete cascade,
 PRIMARY KEY (forum, user_nickname));
 
-create INDEX idx_users_nickname on users using btree (nickname text_pattern_ops);
-create INDEX idx_users_email on users using btree (email text_pattern_ops);
-create INDEX idx_forums_slug on forums using btree (slug text_pattern_ops);
-create INDEX idx_forums_nickname on forums using btree (user_nickname text_pattern_ops);
-create INDEX idx_threads_id on threads using btree (id);
-create INDEX idx_threads_nickname on threads using btree (user_nickname text_pattern_ops);
-create INDEX idx_threads_slug on threads using btree (slug text_pattern_ops);
-create INDEX idx_threads_forum on threads using btree (forum_slug text_pattern_ops);
-create INDEX idx_posts_id on posts using btree (id);
-create INDEX idx_posts_nickname on posts using btree (user_nickname text_pattern_ops);
-create INDEX idx_posts_forum on posts using btree (forum_slug text_pattern_ops);
-create INDEX idx_posts_thread on posts using btree (thread_id);
-create INDEX idx_votes_nickname_thread on votes using btree (user_nickname text_pattern_ops, thread_id);
-create INDEX idx_votes_thread on votes using btree (thread_id);
-create INDEX idx_forumusers_forum on forum_users using btree (forum);
-create INDEX idx_forumusers_user on forum_users using btree (user_nickname);
+create INDEX if not exists idx_users_nickname on users using btree (nickname text_pattern_ops);
+create INDEX if not exists idx_users_email on users using btree (email text_pattern_ops);
+create INDEX if not exists idx_forums_slug on forums using btree (slug text_pattern_ops);
+create INDEX if not exists idx_forums_nickname on forums using btree (user_nickname text_pattern_ops);
+create INDEX if not exists idx_threads_id on threads using btree (id);
+create INDEX if not exists idx_threads_nickname on threads using btree (user_nickname text_pattern_ops);
+create INDEX if not exists idx_threads_slug on threads using btree (slug text_pattern_ops);
+create INDEX if not exists idx_threads_forum on threads using btree (forum_slug text_pattern_ops);
+create INDEX if not exists idx_posts_id on posts using btree (id);
+create INDEX if not exists idx_posts_nickname on posts using btree (user_nickname text_pattern_ops);
+create INDEX if not exists idx_posts_forum on posts using btree (forum_slug text_pattern_ops);
+create INDEX if not exists idx_posts_thread on posts using btree (thread_id);
+create INDEX if not exists idx_votes_nickname_thread on votes using btree (user_nickname text_pattern_ops, thread_id);
+create INDEX if not exists idx_votes_thread on votes using btree (thread_id);
+create INDEX if not exists idx_forumusers_forum on forum_users using btree (forum);
+create INDEX if not exists idx_forumusers_user on forum_users using btree (user_nickname);
+
+
 
 create or replace function get_indexes() returns setof int as
 $body$
@@ -93,6 +96,42 @@ begin
 		i = i + 1;
 	end loop;
 	return;
+end
+$body$
+language plpgsql;
+
+create or replace function insert_vote(t_id int, t_slug citext, u_nickname citext,_vote int, flag boolean) returns threads as
+$body$
+declare
+	thread threads;
+	vot votes;
+	len int;
+	old_vot int;
+	e int;
+	_vote2 int;
+begin
+	if flag = False
+	Then
+		SELECT id from threads where slug = t_slug into t_id;
+	end if;
+	select count(*) from votes where thread_id = t_id and user_nickname = u_nickname into len;
+	if len = 0
+	Then 
+		INSERT INTO votes (user_nickname, thread_id, vote) VALUES (u_nickname, t_id, _vote);
+		UPDATE threads SET vote = vote + _vote WHERE id = t_id;
+	else
+		select vote from votes where thread_id = t_id and user_nickname = u_nickname into old_vot;
+		if _vote = old_vot
+		Then
+			SELECT 1 into e;
+		else
+			UPDATE votes SET vote = _vote WHERE user_nickname = u_nickname AND thread_id = t_id;
+			_vote2 = _vote + _vote;
+			UPDATE threads SET vote = vote + _vote2 WHERE id = t_id;
+		end if;
+	end if;
+	select * from threads where id = t_id into thread;
+	return thread;
 end
 $body$
 language plpgsql;

@@ -4,6 +4,7 @@ from django.db import connection
 from django.http import JsonResponse
 from posts_app.enquiry.enquiry import *
 from posts_app.enquiry.connect import *
+from posts_app.enquiry.add_user import *
 import psycopg2
 from django.db.utils import IntegrityError, DatabaseError
 import pytz, datetime
@@ -36,6 +37,7 @@ def create(request, thread_slug):
 	forum_slug = thread[2]
 	param_list = []
 	posts = []
+	usersforum_list = []
 	new_posts = 0
 	time_now = localtime(timezone.now())
 
@@ -51,7 +53,6 @@ def create(request, thread_slug):
 		count = cursor.fetchone()
 		if int(count[0]) != len(parents):
 			cursor.close()
-			
 			return JsonResponse({}, status = 409)
 
 	cursor.execute('select * from get_indexes()');
@@ -64,28 +65,30 @@ def create(request, thread_slug):
 		created = localtime(body['created']) if 'created' in body else time_now
 		param_list.append(list((ids.pop(0)[0], body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent)))
 		new_posts += 1
-		#print(body['created'] if 'created' in body else 0)
-		#print(localtime(body['created']) if 'created' in body else 0)
 		param_array = ['id', 'author', 'message', 'isEdited', 'created', 'thread', 'forum', 'parent']
 		post = dict(zip(param_array, param_list[-1]))
 		posts.append(post)
+		usersforum_list.append(list((body['author'], forum_slug)))
 	
 	cursor.execute("""Prepare posts_insert as INSERT INTO posts (id, user_nickname, message, isEdited, created, thread_id, forum_slug, parent_id)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8);""")
 	try:
 		execute_batch(cursor, "Execute posts_insert (%s, %s, %s, %s, %s, %s, %s, %s)", param_list)
-	except: #psycopg2.Error as e:
-		#print(e)
-		#print(e.pgcode)
+	except: 
 		cursor.execute("deallocate posts_insert;")
 		cursor.close()
 		
 		return JsonResponse({}, status = 404)
 		
-
+	cursor.execute("""Prepare usersforum_insert as INSERT INTO forum_users (user_nickname, forum) VALUES ($1, $2);""")
+	try:
+		execute_batch(cursor, "Execute usersforum_insert (%s, %s)", usersforum_list)
+	except:
+		pass
 	
 	cursor.execute(PLASS_POSTS, [new_posts, forum_slug,])
 	cursor.execute("deallocate posts_insert;")
+	cursor.execute("deallocate usersforum_insert;")
 	cursor.close()
 	
 	return JsonResponse(posts, status = 201, safe = False)
@@ -107,45 +110,22 @@ def vote(request, thread_slug):
 	except:
 		pass
 	if type(thread_slug) == int:
-		cursor.execute(SELECT_THREAD_BY_SLUG_OR_ID_ALL, [thread_slug, str(thread_slug)])
+		flag = True
+		thread_id = thread_slug
+		thread_slug = '_'
 	else:
-		cursor.execute(SELECT_THREAD_BY_SLUG_ALL, [str(thread_slug)])
-	if cursor.rowcount == 0:
+		flag = False
+		thread_id = 0
+	try:
+		cursor.execute('select * from insert_vote(%s, %s, %s, %s, %s)', [thread_id, thread_slug, user_nickname, vote, flag])
+	except psycopg2.Error as e:
 		cursor.close()
-		
 		return JsonResponse({}, status = 404)
 	thread = cursor.fetchone()
-	param_array = ['author', 'created', 'forum', 'id', 'message', 'slug', 'title', 'votes']
+	cursor.close()
+	param_array = ['id', 'author', 'title', 'slug', 'created', 'forum', 'message', 'votes']
 	thread = dict(zip(param_array, thread))
-	thread_id = thread['id']
-	thread['created'] = localtime(thread['created'])
-	thread_slug = thread['slug']
-	cursor.execute(SELECT_VOTE_BY_AUTHOR_SLUG, [user_nickname, thread_id,])
-	if cursor.rowcount == 0:
-		try:
-			cursor.execute(INSERT_VOTE, [user_nickname, thread_id, vote])
-		except:
-			cursor.close()
-			
-			return JsonResponse({}, status = 404)
-		thread['votes'] = thread['votes'] + vote
-		cursor.execute(UPDATE_THREAD_VOTE, [vote, thread_id])
-		cursor.close()
-		
-		return JsonResponse(thread, status = 200)
-	else:
-		vote_row = cursor.fetchone()
-		if int(vote_row[2]) == int(vote):
-			cursor.close()
-			
-			return JsonResponse(thread, status = 200)
-		else:
-			cursor.execute(UPDATE_VOTE, [vote, user_nickname, thread_id,])
-			thread['votes'] = thread['votes'] + 2 * vote
-			cursor.execute(UPDATE_THREAD_VOTE, [2 * vote, thread_id,])
-			cursor.close()
-			
-			return JsonResponse(thread, status = 200)
+	return JsonResponse(thread, status = 200)
 
 @csrf_exempt
 def details(request, thread_slug):
