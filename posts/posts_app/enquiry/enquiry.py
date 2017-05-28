@@ -77,48 +77,19 @@ SELECT_POSTS_BY_THREAD_ID = '''
 			LIMIT %s OFFSET %s
 		'''
 
-_SELECT_POSTS_BY_THREAD_ID_TREE = '''
-			WITH RECURSIVE recursetree (id, message, author, forum, thread, parent, created, isEdited, path) AS (
-					SELECT posts.*, array_append('{}'::int[], id) FROM posts
-					WHERE parent_id IS NULL
-						AND thread_id = %s
-				UNION ALL
-					SELECT p.*, array_append(path, p.id)
-					FROM posts AS p
-					JOIN recursetree rt ON rt.id = p.parent_id
-			)
-			SELECT rt.*, array_to_string(path, '.') as path1 
-			FROM recursetree AS rt
-			ORDER BY path %s
-			LIMIT %s OFFSET %s
-		'''
+
 
 SELECT_POSTS_BY_THREAD_ID_TREE = '''select * from posts 
 											where thread_id = %s
 											ORDER by path %s
 											Limit %s offset %s''' 
 
-_SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = '''
-			WITH RECURSIVE recursetree (id, message, author, forum, thread, parent, created, isEdited, path) AS (
-					(SELECT posts.*, array_append('{}'::int[], id) FROM posts
-					WHERE parent_id IS NULL AND
-					thread_id = %s
-					ORDER BY "id" %s
-					LIMIT %s OFFSET %s)
-				UNION ALL
-					SELECT p.*, array_append(path, p.id)
-					FROM posts AS p
-					JOIN recursetree rt ON rt.id = p.parent_id
-			)
-			SELECT rt.*, array_to_string(path, '.') as path1 
-			FROM recursetree AS rt
-			ORDER BY path %s
-		'''
 
-SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = """SELECT * FROM "posts"
-							WHERE path[1] IN (
+
+SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = """ SELECT * FROM "posts"
+							WHERE root IN (
 				SELECT "id" FROM "posts"
-				WHERE parent_id is Null AND "thread_id" = %s
+				WHERE "thread_id" = %s AND parent_id is Null
 				ORDER BY "id" %s
 				LIMIT %s OFFSET %s
 			)

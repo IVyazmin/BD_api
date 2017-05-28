@@ -76,18 +76,18 @@ def create(request, thread_slug):
 		else:
 			parent = None
 			path = [id,]
-
-		param_list.append(list((id, body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent, path)))
+		root = path[0]
+		param_list.append(list((id, body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent, path, root)))
 		new_posts += 1
-		param_array = ['id', 'author', 'message', 'isEdited', 'created', 'thread', 'forum', 'parent', 'path']
+		param_array = ['id', 'author', 'message', 'isEdited', 'created', 'thread', 'forum', 'parent', 'path', 'root']
 		post = dict(zip(param_array, param_list[-1]))
 		posts.append(post)
 		usersforum_list.append(list((body['author'], forum_slug)))
 	
-	cursor.execute("""Prepare posts_insert as INSERT INTO posts (id, user_nickname, message, isEdited, created, thread_id, forum_slug, parent_id, path)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);""")
+	cursor.execute("""Prepare posts_insert as INSERT INTO posts (id, user_nickname, message, isEdited, created, thread_id, forum_slug, parent_id, path, root)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);""")
 	try:
-		execute_batch(cursor, "Execute posts_insert (%s, %s, %s, %s, %s, %s, %s, %s, %s)", param_list)
+		execute_batch(cursor, "Execute posts_insert (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", param_list)
 	except psycopg2.Error as e:
 		
  
@@ -96,7 +96,7 @@ def create(request, thread_slug):
 		
 		return JsonResponse({}, status = 404)
 		
-	cursor.execute("""Prepare usersforum_insert as INSERT INTO forum_users (user_nickname, forum) VALUES ($1, $2);""")
+	cursor.execute("""Prepare usersforum_insert as INSERT INTO forum_users (user_nickname, forum) VALUES ($1, $2) ON CONFLICT DO NOTHING;""")
 	try:
 		execute_batch(cursor, "Execute usersforum_insert (%s, %s)", usersforum_list)
 	except:
@@ -270,7 +270,6 @@ def slug_posts(request, thread_slug):
 
 	args = tuple(args)
 	query = query % args
-	
 	cursor.execute(query)
 	_posts = cursor.fetchall()
 	param_array = ["id", "message", "author", "forum", "thread", "parent", "created", "isEdited", "path"]
