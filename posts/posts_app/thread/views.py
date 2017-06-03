@@ -74,7 +74,7 @@ def create(request, thread_slug):
 			path = post_parents[parent][:]
 			path.append(id)
 		else:
-			parent = None
+			parent = 0
 			path = [id,]
 		root = path[0]
 		param_list.append(list((id, body['author'], body['message'], isEdited, created, thread_id, forum_slug, parent, path, root)))

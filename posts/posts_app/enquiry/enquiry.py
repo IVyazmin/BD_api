@@ -73,7 +73,7 @@ UPDATE_VOTE = '''UPDATE votes SET vote = %s
 SELECT_POSTS_BY_THREAD_ID = '''
 			SELECT id, message, user_nickname, forum_slug, thread_id, parent_id, created, isEdited, path FROM "posts"
 			WHERE thread_id = %s
-			ORDER BY created %s, "id" %s
+			ORDER BY created %s, id %s
 			LIMIT %s OFFSET %s
 		'''
 
@@ -88,12 +88,12 @@ SELECT_POSTS_BY_THREAD_ID_TREE = '''select * from posts
 
 SELECT_POSTS_BY_THREAD_ID_PARENT_TREE = """ SELECT * FROM "posts"
 							WHERE root IN (
-				SELECT "id" FROM "posts"
-				WHERE "thread_id" = %s AND parent_id is Null
-				ORDER BY "id" %s
+				SELECT id FROM posts
+				WHERE thread_id = %s AND parent_id = 0
+				ORDER BY id %s
 				LIMIT %s OFFSET %s
 			)
-			ORDER BY "path" %s"""
+			ORDER BY path %s"""
 
 UPDATE_THREAD = '''UPDATE threads SET user_nickname = %s, created = %s, forum_slug = %s, id = %s, message = %s, title = %s, slug = %s
 				WHERE id = %s
@@ -113,7 +113,7 @@ SELECT_USERS_BY_FORUM = '''SELECT u.about, u.email, u.fullname, u.nickname FROM 
 								%s;'''
 
 
-SELECT_POST_BY_ID = '''SELECT "id", "message", "user_nickname", "forum_slug", "thread_id", "parent_id", "created", "isedited" from posts
+SELECT_POST_BY_ID = '''SELECT id, message, user_nickname, forum_slug, thread_id, parent_id, created, isedited from posts
 						WHERE id = %s;'''
 
 UPDATE_POST = '''UPDATE posts SET message = %s, isedited = True
@@ -128,6 +128,7 @@ COUNT_USERS = '''SELECT COUNT(*) from users;'''
 COUNT_POSTS = '''SELECT COUNT(*) from posts;'''
 
 DELETE_ALL = '''TRUNCATE votes CASCADE;
+				TRUNCATE forum_users CASCADE;
 				TRUNCATE posts CASCADE;
 				TRUNCATE threads CASCADE;
 				TRUNCATE forums CASCADE;

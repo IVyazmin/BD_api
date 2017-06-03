@@ -66,11 +66,11 @@ message text,
 user_nickname citext collate ucs_basic references users (nickname) on delete cascade,
 forum_slug citext collate ucs_basic references forums (slug),
 thread_id int references threads (id) on delete cascade,
-parent_id int references posts (id) default NULL,
+parent_id int default 0,
 created timestamp with time zone,
 isEdited boolean default False,
 path int[],
-root int references posts (id)  on delete cascade default NULL);
+root int  default 0);
 
 create table votes (
 user_nickname citext collate ucs_basic references users (nickname) on delete cascade,
@@ -84,22 +84,33 @@ forum citext collate ucs_basic references forums (slug) on delete cascade,
 PRIMARY KEY (forum, user_nickname));
 
 create INDEX if not exists idx_users_nickname on users using btree (nickname);
+
 create INDEX if not exists idx_forums_slug on forums using btree (slug);
 create INDEX if not exists idx_forums_nickname on forums using btree (user_nickname);
-create INDEX if not exists idx_threads_id on threads using btree (id);
+
+create INDEX if not exists idx_threads_id on threads using btree (id, slug);
 create INDEX if not exists idx_threads_nickname on threads using btree (user_nickname);
 create INDEX if not exists idx_threads_slug on threads using btree (slug);
 create INDEX if not exists idx_threads_forum on threads using btree (forum_slug);
+
 create INDEX if not exists idx_posts_id on posts using btree (id);
 create INDEX if not exists idx_posts_nickname on posts using btree (user_nickname);
 create INDEX if not exists idx_posts_forum on posts using btree (forum_slug);
-create INDEX if not exists idx_posts_thread on posts using btree (thread_id, parent_id);
+
+create INDEX if not exists idx_posts_path on posts (path);
+
+create INDEX if not exists idx_posts_TP ON posts (thread_id, path);
+create INDEX if not exists idx_posts_TCI on posts (thread_id, created, id);
+create INDEX if not exists idx_posts_TPI on posts (thread_id, parent_id, id);
+create INDEX if not exists idx_posts_RP on posts (root, path);
+
 create INDEX if not exists idx_votes_nickname_thread on votes using btree (user_nickname, thread_id);
 create INDEX if not exists idx_votes_thread on votes using btree (thread_id);
-create INDEX if not exists idx_forumusers_forum on forum_users using btree (forum);
+
+create INDEX if not exists idx_forumusers_forum on forum_users using btree (forum, user_nickname);
 create INDEX if not exists idx_forumusers_user on forum_users using btree (user_nickname);
-create INDEX if not exists idx_posts_path on posts (path);
-create INDEX if not exists idx_posts_path_1 on posts (root);
+
+
 
 
 

@@ -42,3 +42,5 @@ return thread;
 end
 $body$
 language plpgsql;
+
+SELECT max_time, mean_time, total_time, query from pg_stat_statements;
